@@ -28,6 +28,8 @@
 #include "../m5stack-cplus2/pins_arduino.h"
 #elif ESP32S3DEVKITC1
 #include "../ESP-General/pins_arduino.h"
+#elif WS_S3_LCD_147
+#include "../ws-s3-lcd-147/pins_arduino.h"
 #elif SMOOCHIEE_BOARD
 #include "../smoochiee-board/pins_arduino.h"
 #elif XK404

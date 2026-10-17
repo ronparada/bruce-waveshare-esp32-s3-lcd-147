@@ -37,7 +37,7 @@ out_bin  = proj_dir / f"Bruce-{pioenv}.bin"
 
 # Esptool from PlatformIO + Python executable
 esptool_pkg = senv.PioPlatform().get_package_dir("tool-esptoolpy")
-esptool_py  = str(Path(esptool_pkg) / "esptool")
+esptool_py  = str(Path(esptool_pkg) / "esptool") if esptool_pkg else None
 python_exe  = senv.get("PYTHONEXE", "python")
 
 chip_arg = mcu if mcu else "esp32"
@@ -99,7 +99,7 @@ def _merge_bins_callback(target, source, env):
             env.Exit(1)
 
     cmd = " ".join([
-        q(python_exe), "-m", "platformio", "pkg", "exec", "-p", q("tool-esptoolpy"), "--", "esptool.py",
+        q(python_exe), "-m", "esptool",
         "--chip", chip_arg,
         "merge-bin",
         "--output", q(out_bin),

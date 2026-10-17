@@ -6,6 +6,45 @@ print("Patching library conflicts with ESP32 core...")
 
 # List of conflicts: (file_pattern, search_pattern, replace_pattern)
 conflicts = [
+    # FastLED 3.10.7 introduces an internal 'FP' template class (Fixed-Point) in
+    # its audio/FFT module and in the animartrix render helper.  Bruce globally
+    # defines '#define FP 1' (font-size shorthand) in every board's pins_arduino.h,
+    # which the preprocessor expands inside FastLED's source, producing syntax errors
+    # like "expected ';' before 'phase'" (FP phase → 1 phase).
+    # Fix: undefine FP in each FastLED unity-build entry point AFTER the
+    # fl/system/arduino.h include (which is what drags in Arduino.h → pins_arduino.h
+    # → #define FP 1).  This is the narrowest safe insertion point: FastLED's own
+    # headers are included afterwards and see a clean macro namespace, while Bruce's
+    # own source (main.cpp, settings.cpp, …) includes pins_arduino.h directly and
+    # retains FP=1 as the font-size shorthand.
+    (
+        ".pio/libdeps/*/FastLED/src/fl/build/*.cpp",
+        r'#include "fl/system/arduino\.h"',
+        '#include "fl/system/arduino.h"\n// Bruce: undef FP (board macro collides with FastLED fixed-point template)\n#ifdef FP\n#undef FP\n#endif'
+    ),
+    # FastLED 3.10.7 fs_sdcard_arduino.cpp.hpp declares virtual overrides without
+    # FL_NO_EXCEPT even though the base class declares them noexcept — GCC -Werror
+    # treats "looser exception specification" as a hard error.
+    (
+        ".pio/libdeps/*/FastLED/src/fl/fs/sd/fs_sdcard_arduino.cpp.hpp",
+        r'bool has_error\(\) const override \{ return false; \}',
+        'bool has_error() const FL_NO_EXCEPT override { return false; }'
+    ),
+    (
+        ".pio/libdeps/*/FastLED/src/fl/fs/sd/fs_sdcard_arduino.cpp.hpp",
+        r'void clear_error\(\) override \{\}',
+        'void clear_error() FL_NO_EXCEPT override {}'
+    ),
+    (
+        ".pio/libdeps/*/FastLED/src/fl/fs/sd/fs_sdcard_arduino.cpp.hpp",
+        r'int error_code\(\) const override \{ return 0; \}',
+        'int error_code() const FL_NO_EXCEPT override { return 0; }'
+    ),
+    (
+        ".pio/libdeps/*/FastLED/src/fl/fs/sd/fs_sdcard_arduino.cpp.hpp",
+        r'const char\* error_message\(\) const override \{ return "No error"; \}',
+        'const char* error_message() const FL_NO_EXCEPT override { return "No error"; }'
+    ),
     (
         ".pio/libdeps/*/ESP8266SAM/src/render.c",
         r'static void yield\(\)',
